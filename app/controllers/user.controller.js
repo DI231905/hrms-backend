@@ -14,77 +14,154 @@ const path = require("path");
 exports.addUser = async (req, res) => {
   console.log(req.body, "req", req.files);
   try {
-    const existingUser = await User.findOne({
-      where: {
-        [Op.or]: [{ name: req.body.userName }, { Email: req.body.email }],
-      },
-    });
+    let userId;
+    if (req.body.id) {
+      const updateUser = await User.update(
+        {
+          name: req.body.userName,
+          Email: req.body.email,
+          cardId: req.body.cardId,
+          BirthDate: req.body.birthDate,
+          JoinDate: req.body.joinDate,
+          ReLievingDate: req.body.ReLievingDate,
+          mobileno: req.body.mobileNo,
+          altmobileno: req.body.altMobileNo,
+          parentmobileno: req.body.parentMobileNo,
+          reportingOfficer: req.body.reportingOfficer,
+          leaveApprovalRights: req.body.leaveApprovalRights ? 1 : 0,
+          designationId: parseInt(req.body.designationId),
+          pms_admin: req.body.pmsAdmin ? 1 : 0,
+          dontSendTimeMail: req.body.dontSendTimeMail ? 1 : 0,
+          archive: req.body.archive ? 1 : 0,
+          Password: bcrypt.hashSync(req.body.password, 8),
+          Role: req.body.Role,
+          Status: req.body.Status,
+        },
+        {
+          where: {
+            id: req.body.id,
+          },
+        }
+      );
+      userId = req.body.id;
+      console.log(req.files);
+      if (req.files) {
+        if (!fs.existsSync(`./uploads/profile/${userId}`)) {
+          fs.mkdirSync(`./uploads/profile/${userId}`, { recursive: true });
+        }
 
-    if (existingUser) {
-      return res.status(400).json({
-        errMessage: "Name or Email or cardId is already in use.",
-        status: false,
-      });
-    }
-
-    const newUser = await User.create({
-      name: req.body.userName,
-      Email: req.body.email,
-      cardId: req.body.cardId,
-      BirthDate: req.body.birthDate,
-      JoinDate: req.body.joinDate,
-      ReLievingDate: req.body.ReLievingDate,
-      mobileno: req.body.mobileNo,
-      altmobileno: req.body.altMobileNo,
-      parentmobileno: req.body.parentMobileNo,
-      reportingOfficer: req.body.reportingOfficer,
-      leaveApprovalRights: req.body.leaveApprovalRights ? 1 : 0,
-      designationId: parseInt(req.body.designationId),
-      pms_admin: req.body.pmsAdmin ? 1 : 0,
-      dontSendTimeMail: req.body.dontSendTimeMail ? 1 : 0,
-      archive: req.body.archive ? 1 : 0,
-      Password: bcrypt.hashSync(req.body.password, 8),
-      Role: "user",
-      Status: "active",
-    });
-
-    const userId = newUser.id;
-   
-    console.log(req.files)
-
-    if (req.files) {
-      if (!fs.existsSync(`./uploads/profile/${userId}`)) {
-        fs.mkdirSync(`./uploads/profile/${userId}`, { recursive: true });
+        await fs.readdir(`./uploads/profile/${userId}`, (err, files) => {
+          if (err) {
+            return res.status(500).send(err);
+          }
+          if (files[0]) {
+            fs.unlink(
+              `./uploads/profile/${userId}/${files[0]}`,
+              (data, err) => {
+                if (err) {
+                  return res.status(500).send(err);
+                }
+              }
+            );
+          }
+          req.files.filename.mv(
+            `./uploads/profile/${userId}/${req.files.filename.name}`,
+            (data, err) => {
+              if (err) {
+                return res.status(500).send(err);
+              }
+            }
+          );
+        });
+      } else {
       }
 
-      await fs.readdir(`./uploads/profile/${userId}`, (err, files) => {
-        if (err) {
-          return res.status(500).send(err);
-        }
-        if (files[0]) {
-          fs.unlink(`./uploads/profile/${userId}/${files[0]}`, (data, err) => {
-            if (err) {
-              return res.status(500).send(err);
-            }
-          });
-        }
-        req.files.filename.mv(
-          `./uploads/profile/${userId}/${req.files.filename.name}`,
-          (data, err) => {
-            if (err) {
-              return res.status(500).send(err);
-            }
-          }
-        );
+      // Update the user record with the profile picture path
+      // await updateUser.update(
+      //   { profile_image: req.files.filename.name },
+      //   {
+      //     where: {
+      //       id: req.body.id,
+      //     },
+      //   }
+      // );
+    } else {
+      const existingUser = await User.findOne({
+        where: {
+          [Op.or]: [{ name: req.body.userName }, { Email: req.body.email }],
+        },
       });
-    }else{
 
+      if (existingUser) {
+        return res.status(400).json({
+          errMessage: "Name or Email or cardId is already in use.",
+          status: false,
+        });
+      }
+
+      const newUser = await User.create({
+        name: req.body.userName,
+        Email: req.body.email,
+        cardId: req.body.cardId,
+        BirthDate: req.body.birthDate,
+        JoinDate: req.body.joinDate,
+        ReLievingDate: req.body.ReLievingDate,
+        mobileno: req.body.mobileNo,
+        altmobileno: req.body.altMobileNo,
+        parentmobileno: req.body.parentMobileNo,
+        reportingOfficer: req.body.reportingOfficer,
+        leaveApprovalRights: req.body.leaveApprovalRights ? 1 : 0,
+        designationId: parseInt(req.body.designationId),
+        pms_admin: req.body.pmsAdmin ? 1 : 0,
+        dontSendTimeMail: req.body.dontSendTimeMail ? 1 : 0,
+        archive: req.body.archive ? 1 : 0,
+        Password: bcrypt.hashSync(req.body.password, 8),
+        Role: "user",
+        Status: "active",
+      });
+
+      userId = newUser.id;
+
+      console.log(req.files);
+      if (req.files) {
+        if (!fs.existsSync(`./uploads/profile/${userId}`)) {
+          fs.mkdirSync(`./uploads/profile/${userId}`, { recursive: true });
+        }
+
+        await fs.readdir(`./uploads/profile/${userId}`, (err, files) => {
+          if (err) {
+            return res.status(500).send(err);
+          }
+          if (files[0]) {
+            fs.unlink(
+              `./uploads/profile/${userId}/${files[0]}`,
+              (data, err) => {
+                if (err) {
+                  return res.status(500).send(err);
+                }
+              }
+            );
+          }
+          req.files.filename.mv(
+            `./uploads/profile/${userId}/${req.files.filename.name}`,
+            (data, err) => {
+              if (err) {
+                return res.status(500).send(err);
+              }
+            }
+          );
+        });
+      } else {
+      }
+
+      // Update the user record with the profile picture path
+      await newUser.update({ profile_image: req.files.filename.name });
     }
 
-    // Update the user record with the profile picture path
-    await newUser.update({ profilePicture: req.files.filename.name });
-
-    res.json({ response: "successfully added!", status: true });
+    res.json({
+      response: req.body.id ? "successfully udpated!" : "successfully added!",
+      status: true,
+    });
   } catch (error) {
     console.error("Error occurred while adding user:", error);
     res
@@ -188,24 +265,39 @@ exports.getUser = async (req, res) => {
         message: "No user Found",
       });
     }
-    //   User.findAll({
-    //     where: {
-    //         Role: "user",
-    //         name: { [Op.like]: `%${req.query.searchByName}%` },
-    //         Email: { [Op.like]: `%${req.query.searchByEmail}%` },
-    //     },
-    //     order:
-    //         req.query.orderBy === "ACC"
-    //             ? [req.query.sortBy]
-    //             : [[req.query.sortBy, "desc"]],
-    //     raw: true,
-    //     nest: true,
-    // })
-    //     .then((user) => {
-    //         res.send(user);
-    //     })
-    //     .catch((e) => console.log(e));
   } catch (error) {
+    console.log(error, "error");
+  }
+};
+
+exports.getUserbyId = async (req, res) => {
+  try {
+    if (req.params.id) {
+      let user = await User.findOne({
+        where: {
+          id: req.params.id,
+        },
+        raw: true,
+        nest: true,
+      });
+      console.log(user);
+      if (user) {
+        res.status(200).send({
+          user: user,
+        });
+      } else {
+        res.status(200).send({
+          user: {},
+          message: "No user Found",
+        });
+      }
+    } else {
+      res.status(200).send({
+        user: [],
+        message: "User not found",
+      });
+    }
+  } catch (err) {
     console.log(error, "error");
   }
 };
