@@ -10,6 +10,7 @@ const moment = require("moment");
 const e = require("cors");
 const fs = require("fs");
 const path = require("path");
+const Designation = db.designation;
 
 exports.addUser = async (req, res) => {
   console.log(req.body, "req", req.files);
@@ -34,8 +35,8 @@ exports.addUser = async (req, res) => {
           dontSendTimeMail: req.body.dontSendTimeMail ? 1 : 0,
           archive: req.body.archive ? 1 : 0,
           Password: bcrypt.hashSync(req.body.password, 8),
-          Role: req.body.Role,
-          Status: req.body.Status,
+          Role: req.body.role,
+          Status:req.body.status
         },
         {
           where: {
@@ -116,13 +117,12 @@ exports.addUser = async (req, res) => {
         dontSendTimeMail: req.body.dontSendTimeMail ? 1 : 0,
         archive: req.body.archive ? 1 : 0,
         Password: bcrypt.hashSync(req.body.password, 8),
-        Role: "user",
-        Status: "active",
+        Role: req.body.role,
+        Status:req.body.status
       });
 
       userId = newUser.id;
 
-      console.log(req.files);
       if (req.files) {
         if (!fs.existsSync(`./uploads/profile/${userId}`)) {
           fs.mkdirSync(`./uploads/profile/${userId}`, { recursive: true });
@@ -254,7 +254,6 @@ exports.getUser = async (req, res) => {
       raw: true,
       nest: true,
     });
-    console.log(users);
     if (users) {
       res.status(200).send({
         user: users,
@@ -280,7 +279,6 @@ exports.getUserbyId = async (req, res) => {
         raw: true,
         nest: true,
       });
-      console.log(user);
       if (user) {
         res.status(200).send({
           user: user,
@@ -299,5 +297,47 @@ exports.getUserbyId = async (req, res) => {
     }
   } catch (err) {
     console.log(error, "error");
+  }
+};
+
+exports.getdesignation = async (req, res) => {
+  console.log("called");
+  try {
+    let response = {};
+    await Designation.findAll({
+      attributes: [
+        ["id", "value"],
+        ["DesignationTypeName", "label"],
+      ],
+      raw: true,
+    })
+      .then((data) => {
+        console.log(data, "data");
+        //res.send(data);
+        // res.send(data);
+        response.designations = data;
+      })
+      .catch((e) => {
+        console.log(e);
+        response.errMessage = err;
+      });
+    await User.findAll({
+      attributes: ["id", "name", "Email"],
+      raw: true,
+      order: [["name", "ASC"]],
+    })
+      .then((result) => {
+        response.reportingOfficers = result;
+      })
+      .catch((err) => {
+        console.log(err);
+        response.errMessage = err;
+      });
+
+    res.status(200).send({
+      response,
+    });
+  } catch (err) {
+    console.log(err, "err");
   }
 };
